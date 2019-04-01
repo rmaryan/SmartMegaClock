@@ -1,163 +1,184 @@
 /*
- * The firmware for the smart clock.
+ * The the smart clock firmware
+ *
  * Used components:
  * - Ardiono MEGA 2560
  * - LCD screen 320x480 HX8357B
  * - Temperature sensor DHT22
- * - Wifi module ES-01
+ * - Wifi module ES-01 connected to Serial1
  * - RTC module DS3231
+ *
+ *  Copyright (c) 2019 Maryan Rachynskyy
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include <DHT.h>
 #include <DS3231.h>
 #include <Wire.h>
-#include <TFT_HX8357.h>
-#include <SD.h>
 
-//Safeguard this include with the IFDEF - that was not done properly inside, and Eclipse/Sloeber crashes because of this
-#ifndef _FREESANS24PT7b_
-#define _FREESANS24PT7b_
-#include <Fonts/GFXFF/FreeSans24pt7b.h>
-#endif
+#include "SmartClockUI.h"
+#include "SDConfigFile.h"
 
+// Initialize DHT sensor
 #define DHTPIN 17     // DHT sensor is connected to the pin #17
 #define DHTTYPE DHT22   // DHT type is DHT22
 
-// Initialize DHT sensor
 DHT dht(DHTPIN, DHTTYPE);
 float hum;  //Stores humidity value
 float temp; //Stores temperature value
 
+
 // RTC definitions
+#define TIMER_REFRESH_CYCLE 1000
+
 DS3231 clock;
 bool h12;
 bool PM;
-
-// LCD screen definitions
-TFT_HX8357 tft = TFT_HX8357();
-byte omm = 99;
 uint8_t hh, mm, ss;
-byte xcolon = 0;
-int xsecs = 0;
 
-const uint16_t HOURS_LEFT = 90; // top boundary of the hours text
-const uint16_t HOURS_TOP = 85; // left boundary of the hours text
-const uint16_t SECONDS_TOP_SHIFT = 24; // seconds top shift from the hours text
-const uint16_t TEMP_LEFT = 45; // left boundary of the temperature text
-const uint16_t TEMP_RIGHT = 240; // right boundary of the temperature text
-const uint16_t HUM_LEFT = 360; // left boundary of the humidity text
-const uint16_t HUM_TEMP_TOP = 260; // top boundary of the temp/humidity text
+// Clock UI class
+SmartClockUI* clockUI = NULL;
 
-const uint16_t BG_COLOR = TFT_BLACK;    // background color
-const uint16_t TIME_COLOR = TFT_YELLOW; // time color
-const uint16_t TIME_DIMMED_COLOR = 0x39C4; // dimmed time color (for colon)
-const uint16_t TEMP_COLOR = TFT_GREEN;     // temperature color
-const uint16_t HUM_COLOR = TFT_CYAN;       // humidity color
+// commands processing block
+// we should handle both WiFi serial stream and a hardware serial
+String inputString = "";      // a String to hold incoming data
+String inputStringWiFi = "";  // a String to hold incoming data
 
-char TEMP_UOM_LABEL[] = "C"; // temperature unit of measure label
-char HUM_UOM_LABEL[] = "%";  // humidity unit of measure label
+unsigned long timeForRefresh = 0; // the counter to detect when it is time to refresh the screen
+
+void loadConfig() {
+	//TODO To be completed
+	return;
+}
 
 void setup() {
+	Serial.begin(57600);
+	while (!Serial) {
+		; // wait for serial port to connect. Needed for native USB port only
+	}
+
 	// Serial1 is where we connected a WiFi module
-	Serial1.begin(9600);
+	Serial1.begin(57600);
+
+	// reserve 200 bytes for the inputString:
+	inputString.reserve(200);
 
 	dht.begin();
 
 	Wire.begin();
 
-	tft.init();
-	// we had to patch the original library to make the screen working in the position we need
-	// #define MADCTL_BGR 0x08
-	// was changed to
-	// #define MADCTL_BGR 0x0B
-	// in the file TFT_HX8357.cpp
-	tft.setRotation(1);
-	tft.fillScreen(BG_COLOR);
-	tft.setFreeFont(&FreeSans24pt7b);
-	tft.setTextSize(1);
+	clockUI = new SmartClockUI();
 
-	// Initializing the SD card
-	if (!SD.begin()) {
-		Serial.println("SD initialization failed!");
-		while (1)
-			;
+	// load configuration from the SD card
+	loadConfig();
+}
+
+/*
+ * Process the command
+ */
+void processCommand(const String command, bool isFromWiFi) {
+	// store the reference to the command source
+	HardwareSerial* serial = isFromWiFi ? &Serial1 : &Serial;
+
+	//TODO Handle commands here
+
+	serial->print("Received command: '");
+	serial->print(command);
+	serial->println("'");
+
+	//Print temp and humidity values
+	serial->print("Humidity: ");
+	serial->print(hum);
+	serial->print(" %, Temp: ");
+	serial->print(temp);
+	serial->println(" Celsius");
+}
+
+/*
+ * SerialEvent occurs whenever a new data comes in the hardware serial RX. This
+ * routine is run between each time loop() runs, so using delay inside loop can
+ * delay response. Multiple bytes of data may be available.
+ * Please note - we are handling two serial streams. One from SerialMonitor
+ * and another - from the WiFi board
+ */
+void serialEvent() {
+	while (Serial.available()) {
+		// check for string overflow
+		if(inputString.length()>150) {
+			Serial.println("Command is too long...");
+			inputString = "";
+		} else {
+			// get the new byte
+			char inChar = Serial.read();
+			// if the incoming character is a newline - process a complete command
+			if (inChar == '\n') {
+				inputString.trim();
+				processCommand(inputString, false);
+				inputString = "";
+			} else {
+				// add it to the inputString:
+				inputString += inChar;
+			}
+		}
+	}
+}
+
+/*
+ * This serial event handler deals with the WiFi serial stream
+ */
+void serialEvent1() {
+	while (Serial1.available()) {
+		// check for string overflow
+		if(inputStringWiFi.length()>150) {
+			Serial1.println("Command is too long...");
+			inputStringWiFi = "";
+		} else {
+			// get the new byte
+			int inChar = Serial1.read();
+			// process only ASCII chars
+			if((inChar>9) && (inChar < 122)) {
+				// if the incoming character is a newline - process a complete command
+				if (inChar == '\n') {
+					inputStringWiFi.trim();
+					processCommand(inputStringWiFi, true);
+					inputStringWiFi = "";
+				} else {
+					// add it to the inputString:
+					inputStringWiFi += (char)inChar;
+				}
+			}
+		}
 	}
 }
 
 void loop() {
-	// refresh screen every second
-	delay(1000);
+	if(millis() > timeForRefresh) {
+		timeForRefresh = millis()+TIMER_REFRESH_CYCLE;
 
-	// Get the hour, minute, and second
-	hh = clock.getHour(h12, PM);
-	mm = clock.getMinute();
-	ss = clock.getSecond();
+		// Get the hour, minute, and second
+		hh = clock.getHour(h12, PM);
+		mm = clock.getMinute();
+		ss = clock.getSecond();
+		hum = 0;
+		temp = 0;
+		if (!(ss % 10)) {
+			//Read the humidity and temperature values
+			hum = dht.readHumidity();
+			temp = dht.readTemperature();
+		}
 
-	int xpos = HOURS_LEFT;
-	int ypos = HOURS_TOP;
-	int ysecs = ypos + SECONDS_TOP_SHIFT;
-
-	tft.setTextColor(TIME_COLOR, BG_COLOR);
-	if (omm != mm) { // Redraw hours and minutes time every minute
-		omm = mm;
-		// Draw hours and minutes
-		if (hh < 10)
-			xpos += tft.drawChar('0', xpos, ypos, 8); // Add hours leading zero for 24 hr clock
-		xpos += tft.drawNumber(hh, xpos, ypos, 8);    // Draw hours
-		xcolon = xpos; // Save colon coord for later to flash on/off later
-		xpos += tft.drawChar(':', xpos, ypos - 8, 8);
-		if (mm < 10)
-			xpos += tft.drawChar('0', xpos, ypos, 8); // Add minutes leading zero
-		xpos += tft.drawNumber(mm, xpos, ypos, 8);             // Draw minutes
-		xsecs = xpos; // Save seconds 'x' position for later display updates
-	}
-	xpos = xsecs;
-
-	if (ss % 2) { // Flash the colons on/off
-		tft.setTextColor(TIME_DIMMED_COLOR, BG_COLOR);  // Set colour to grey to dim colon
-		tft.drawChar(':', xcolon, ypos - 8, 8);     // Hour:minute colon
-		xpos += tft.drawChar(':', xsecs, ysecs, 6); // Seconds colon
-		tft.setTextColor(TIME_COLOR, BG_COLOR);    // Set colour back to yellow
-	} else {
-		tft.drawChar(':', xcolon, ypos - 8, 8);     // Hour:minute colon
-		xpos += tft.drawChar(':', xsecs, ysecs, 6); // Seconds colon
-	}
-
-	//Draw seconds
-	if (ss < 10)
-		xpos += tft.drawChar('0', xpos, ysecs, 6); // Add leading zero
-
-	tft.drawNumber(ss, xpos, ysecs, 6);            // Draw seconds
-
-	// this block is going to be executed every tenth second
-	if (!(ss % 10)) {
-		//Read the humidity and temperature values
-		hum = dht.readHumidity();
-		temp = dht.readTemperature();
-
-		int xpos_t = TEMP_LEFT;
-		int ypos_t = HUM_TEMP_TOP;
-		int xpos_h = HUM_LEFT;
-
-		tft.fillRect(xpos_t, ypos_t, TEMP_RIGHT, tft.height() - ypos_t, BG_COLOR);
-
-		tft.setTextColor(TEMP_COLOR, BG_COLOR);
-		xpos_t += tft.drawFloat(temp, 1, xpos_t, ypos_t, 7);
-		xpos_t += tft.drawChar('O', xpos_t, ypos_t, 4);
-		tft.drawString(TEMP_UOM_LABEL, xpos_t, ypos_t, 1);
-
-		tft.fillRect(xpos_h, ypos_t, tft.width() - xpos_t, tft.height() - ypos_t, BG_COLOR);
-
-		tft.setTextColor(HUM_COLOR, BG_COLOR);
-		xpos_h += tft.drawNumber(hum, xpos_h, ypos_t, 7);
-		tft.drawString(HUM_UOM_LABEL, xpos_h, ypos_t, 1);
-
-		//Print temp and humidity values to WiFi
-		Serial1.print("Humidity: ");
-		Serial1.print(hum);
-		Serial1.print(" %, Temp: ");
-		Serial1.print(temp);
-		Serial1.println(" Celsius");
-
+		clockUI->refreshScreen(hh, mm, ss, hum, temp);
 	}
 }
