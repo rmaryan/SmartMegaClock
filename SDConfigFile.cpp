@@ -11,6 +11,9 @@
  */
 
 #include "SDConfigFile.h"
+#include <errno.h>
+
+#include "log.h"
 
 /*
  * Opens the given file on the SD card.
@@ -22,8 +25,8 @@
  */
 boolean SDConfigFile::begin(const char *configFileName, uint8_t maxLineLength) {
 	if (_file) {
-		DEBUG_SDC_PRINT("File is already open: ");
-		DEBUG_SDC_PRINTLN(configFileName);
+		LOGGER_PRINT("File is already open: ");
+		LOGGER_PRINTLN(configFileName);
 		return false;
 	}
 
@@ -38,7 +41,7 @@ boolean SDConfigFile::begin(const char *configFileName, uint8_t maxLineLength) {
 	_lineSize = maxLineLength + 1;
 	_line = (char *) malloc(_lineSize);
 	if (_line == 0) {
-		DEBUG_SDC_PRINTLN("Out of memory");
+		LOGGER_PRINTLN("Out of memory");
 		_atEnd = true;
 		return false;
 	}
@@ -50,8 +53,8 @@ boolean SDConfigFile::begin(const char *configFileName, uint8_t maxLineLength) {
 
 	_file = SD.open(configFileName, FILE_READ);
 	if (!_file) {
-		DEBUG_SDC_PRINT("Could not open SD file: ");
-		DEBUG_SDC_PRINTLN(configFileName);
+		LOGGER_PRINT("Could not open SD file: ");
+		LOGGER_PRINTLN(configFileName);
 		_atEnd = true;
 		return false;
 	}
@@ -134,8 +137,8 @@ boolean SDConfigFile::readNextSetting() {
 	while (bint >= 0 && (char) bint != '\r' && (char) bint != '\n') {
 		if (_lineLength >= _lineSize - 1) { // -1 for a terminating null.
 			_line[_lineLength] = '\0';
-			DEBUG_SDC_PRINT("Line too long: ");
-			DEBUG_SDC_PRINTLN(_line);
+			LOGGER_PRINT("Line too long: ");
+			LOGGER_PRINTLN(_line);
 			_atEnd = true;
 			return false;
 		}
@@ -166,14 +169,14 @@ boolean SDConfigFile::readNextSetting() {
 	 * It's OK to have a null value (nothing after the '=')
 	 */
 	if (_valueIdx < 0) {
-		DEBUG_SDC_PRINT("Missing '=' in line: ");
-		DEBUG_SDC_PRINTLN(_line);
+		LOGGER_PRINT("Missing '=' in line: ");
+		LOGGER_PRINTLN(_line);
 		_atEnd = true;
 		return false;
 	}
 	if (_valueIdx == 1) {
-		DEBUG_SDC_PRINT("Missing Name in line: =");
-		DEBUG_SDC_PRINTLN(_line[_valueIdx]);
+		LOGGER_PRINT("Missing Name in line: =");
+		LOGGER_PRINTLN(_line[_valueIdx]);
 		_atEnd = true;
 		return false;
 	}
@@ -247,13 +250,28 @@ char *SDConfigFile::copyValue() {
 /*
  * Returns the value part of the most-recently-read setting
  * as an integer, or 0 if an error occurred.
+ * Base is 10 for decimal representation, 16 for hexadecimal, etc.
+ * If conversion failed, errno is set to the corresponding value
+ * (we do not use expceptions since they are expensive)
  */
-int SDConfigFile::getIntValue() {
+int SDConfigFile::getIntValue(char base) {
 	const char *str = getValue();
 	if (!str) {
+		errno = EINVAL;
 		return 0;
 	}
-	return atoi(str);
+	errno = 0;
+	return strtol(str, NULL, base);
+}
+
+long SDConfigFile::getLongValue(char base) {
+	const char *str = getValue();
+	if (!str) {
+		errno = EINVAL;
+		return 0;
+	}
+	errno = 0;
+	return strtol(str, NULL, base);
 }
 
 /*
@@ -263,7 +281,7 @@ int SDConfigFile::getIntValue() {
  * all other values correspond to false.
  */
 boolean SDConfigFile::getBooleanValue() {
-	if (strcmp("true", getValue()) == 0) {
+	if (strcmp("Y", getValue()) == 0) {
 		return true;
 	}
 	return false;
@@ -271,15 +289,15 @@ boolean SDConfigFile::getBooleanValue() {
 
 boolean SDConfigFile::beginWrite(const char* configFileName, uint8_t maxLineLength) {
 	if (_file) {
-		DEBUG_SDC_PRINT("File is already open: ");
-		DEBUG_SDC_PRINTLN(configFileName);
+		LOGGER_PRINT("File is already open: ");
+		LOGGER_PRINTLN(configFileName);
 		return false;
 	}
 
 	_file = SD.open(configFileName, FILE_WRITE);
 	if (!_file) {
-		DEBUG_SDC_PRINT("Could not open SD file to write: ");
-		DEBUG_SDC_PRINTLN(configFileName);
+		LOGGER_PRINT("Could not open SD file to write: ");
+		LOGGER_PRINTLN(configFileName);
 		_atEnd = true;
 		return false;
 	}
@@ -298,27 +316,27 @@ boolean SDConfigFile::writeSetting(const char* name, const char* value) {
 	int8_t valueLength = strnlen(value, _maxLineLength);
 
 	if(nameLength + valueLength +1 > _maxLineLength) {
-		DEBUG_SDC_PRINT("Line too long: ");
-		DEBUG_SDC_PRINT(name);
-		DEBUG_SDC_PRINT("=");
-		DEBUG_SDC_PRINTLN(value);
+		LOGGER_PRINT("Line too long: ");
+		LOGGER_PRINT(name);
+		LOGGER_PRINT("=");
+		LOGGER_PRINTLN(value);
 		return false;
 	}
 
 	if(!_file.write(name, nameLength)) {
-		DEBUG_SDC_PRINTLN("File writing error");
+		LOGGER_PRINTLN("File writing error");
 		return false;
 	}
 	if(!_file.write('=')) {
-		DEBUG_SDC_PRINTLN("File writing error");
+		LOGGER_PRINTLN("File writing error");
 		return false;
 	}
 	if(!_file.write(value, valueLength)) {
-		DEBUG_SDC_PRINTLN("File writing error");
+		LOGGER_PRINTLN("File writing error");
 		return false;
 	}
 	if(!_file.write("\r\n")) {
-		DEBUG_SDC_PRINTLN("File writing error");
+		LOGGER_PRINTLN("File writing error");
 		return false;
 	}
 

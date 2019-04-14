@@ -19,7 +19,27 @@
 
 #include "SmartClockUI.h"
 
-SmartClockUI::SmartClockUI() {
+#include "SmartClockConfig.h"
+
+#include "log.h"
+
+char* SmartClockUI::TEMP_UOM_LABEL = (char *)"C"; // temperature unit of measure label
+char* SmartClockUI::HUM_UOM_LABEL = (char *)"%";  // humidity unit of measure label
+char* SmartClockUI::DAY_ICON_FILE = (char *)"sun.bmp"; // day icon file name on SD
+char* SmartClockUI::NIGHT_ICON_FILE = (char *)"moon.bmp"; // night icon file name on SD
+uint8_t SmartClockUI::omm;
+uint16_t SmartClockUI::xcolon;
+uint16_t SmartClockUI::xsecs;
+uint8_t SmartClockUI::partOfDay;
+TFT_HX8357 SmartClockUI::tft;
+
+void SmartClockUI::init() {
+	omm = 99;
+	xcolon = 0;
+	xsecs = 0;
+	partOfDay = 0;
+
+
 	tft = TFT_HX8357();
 	tft.init();
 	// we had to patch the original library to make the screen working in the position we need (upside down)
@@ -34,7 +54,7 @@ SmartClockUI::SmartClockUI() {
 
 	// Initializing the SD card
 	if (!SD.begin()) {
-		Serial.println("SD initialization failed!");
+		LOGGER_PRINTLN("SD initialization failed!");
 		while (1)
 			;
 	}
@@ -186,11 +206,11 @@ void SmartClockUI::drawBMP(char* filename, int x, int y, boolean flip) {
 }
 
 void SmartClockUI::refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, float temp) {
-	int xpos = HOURS_LEFT;
-	int ypos = HOURS_TOP;
+	uint16_t xpos = HOURS_LEFT;
+	uint16_t ypos = HOURS_TOP;
 	int ysecs = ypos + SECONDS_TOP_SHIFT;
 
-	tft.setTextColor(TIME_COLOR, BG_COLOR);
+	tft.setTextColor(SmartClockConfig::cnfColorTime, BG_COLOR);
 	if (omm != mm) { // Redraw hours and minutes time every minute
 		omm = mm;
 		// Draw hours and minutes
@@ -201,7 +221,7 @@ void SmartClockUI::refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, 
 		xpos += tft.drawChar(':', xpos, ypos - 8, 8);
 		if (mm < 10)
 			xpos += tft.drawChar('0', xpos, ypos, 8); // Add minutes leading zero
-		xpos += tft.drawNumber(mm, xpos, ypos, 8);             // Draw minutes
+		xpos += tft.drawNumber(mm, xpos, ypos, 8);    // Draw minutes
 		xsecs = xpos; // Save seconds 'x' position for later display updates
 	}
 	xpos = xsecs;
@@ -210,7 +230,7 @@ void SmartClockUI::refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, 
 		tft.setTextColor(TIME_DIMMED_COLOR, BG_COLOR);  // Set colour to grey to dim colon
 		tft.drawChar(':', xcolon, ypos - 8, 8);     // Hour:minute colon
 		xpos += tft.drawChar(':', xsecs, ysecs, 6); // Seconds colon
-		tft.setTextColor(TIME_COLOR, BG_COLOR);    // Set colour back to yellow
+		tft.setTextColor(SmartClockConfig::cnfColorTime, BG_COLOR);    // Set colour back to yellow
 	} else {
 		tft.drawChar(':', xcolon, ypos - 8, 8);     // Hour:minute colon
 		xpos += tft.drawChar(':', xsecs, ysecs, 6); // Seconds colon
@@ -231,14 +251,14 @@ void SmartClockUI::refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, 
 
 		tft.fillRect(xpos_t, ypos_t, TEMP_RIGHT, tft.height() - ypos_t, BG_COLOR);
 
-		tft.setTextColor(TEMP_COLOR, BG_COLOR);
+		tft.setTextColor(SmartClockConfig::cnfColorTemp, BG_COLOR);
 		xpos_t += tft.drawFloat(temp, 1, xpos_t, ypos_t, 7);
 		xpos_t += tft.drawChar('O', xpos_t, ypos_t, 4);
 		tft.drawString(TEMP_UOM_LABEL, xpos_t, ypos_t, 1);
 
 		tft.fillRect(xpos_h, ypos_t, tft.width() - xpos_t, tft.height() - ypos_t, BG_COLOR);
 
-		tft.setTextColor(HUM_COLOR, BG_COLOR);
+		tft.setTextColor(SmartClockConfig::cnfColorHum, BG_COLOR);
 		xpos_h += tft.drawNumber(hum, xpos_h, ypos_t, 7);
 		tft.drawString(HUM_UOM_LABEL, xpos_h, ypos_t, 1);
 

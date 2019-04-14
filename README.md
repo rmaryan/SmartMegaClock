@@ -16,7 +16,11 @@ Components:
 
 The clock shows current time, date, humidity and room temperature.
 
-The clock accepts telnet connections and can be managed using simple command line interface. 
+The clock accepts telnet connections and can be managed using simple command line interface.
+
+All clock settings are stored on the SD card and are preserved if the clock was turned off.
+
+The clock screen can be dimmed using a manual switch. 
 
 The clock can be powered by any USB power source.
 
@@ -35,7 +39,18 @@ Make sure to set the serial port speed to 57600 baud to match the speed in the c
 
 ## CLI Commands <implementation pending>
 
-[TBC]
+`fonts [X]` - select the font preset #X (X is a number from 1 to 5). If no parameter specified - current font # is shown. Example: `fonts 2`
+
+`time [HH:MM]` - set the clock time (in 24-hours format). If no parameter specified - current time is shown. Example: `time 12:31`
+
+`date [DD/MM/YYY]` - set the clock date. If no parameter specified - current date is shown. Example: `date 21/12/2019`
+
+`showdate [Y | N]` - turns the date indication on or off. If no parameter specified - current state is shown. Example: `showdate Y`
+
+`color [time | date | hum | temp  0x123456]` - set the RGB color for the area specified. Please note, RGB colors are converted to 16-bit RGB565 format (since our screen works with the 16-bit colors only). If no parameter specified - current colors are listed.  Example" `color date 0xFF5a20`
+
+`reset` - reset colors and showdate flag to the factory default state. The configuration file is wiped.
+
 
 ## Used Libraries
 
@@ -43,9 +58,17 @@ Make sure to set the serial port speed to 57600 baud to match the speed in the c
 
 This is an adoption of the Adafruit GFX library to work with the inexpensive HX8357-based LCD screens.
 
-We also had to patch the original library to allow the screen working upside down (that was the only way to fit the screen into the case we've got).  
+We also had to patch the original library to allow the screen working upside down (that was the only way to fit the screen into the case we've got).
 
-https://github.com/Bodmer/TFT_HX8357
+In file *TFT_HX8357.cpp*:
+ 
+`#define MADCTL_BGR 0x08`
+
+was replaces with
+
+`#define MADCTL_BGR 0x0B`
+
+Library page: https://github.com/Bodmer/TFT_HX8357
 
 ### SDConfigFile
 
@@ -55,7 +78,7 @@ The original library was updated to support also writing to the config file.
 
 SDConfigFile library is distributed under the terms of LGPL.
 
-https://github.com/bneedhamia/sdconfigfile
+Library page: https://github.com/bneedhamia/sdconfigfile
 
 ## License 
 

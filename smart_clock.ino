@@ -7,6 +7,7 @@
  * - Temperature sensor DHT22
  * - Wifi module ES-01 connected to Serial1
  * - RTC module DS3231
+ * - Simple toggle switch - connected to pin #7
  *
  *  Copyright (c) 2019 Maryan Rachynskyy
  *  This program is free software: you can redistribute it and/or modify
@@ -24,21 +25,29 @@
  *
  */
 
+// TODO Draw schematics
+// TODO Create commands processing class
+// TODO Implement dimming mode
+
 #include <DHT.h>
 #include <DS3231.h>
 #include <Wire.h>
 
 #include "SmartClockUI.h"
-#include "SDConfigFile.h"
+#include "SmartClockConfig.h"
+#include "SmartClockCommander.h"
+
+#include "log.h"
 
 // Initialize DHT sensor
 #define DHTPIN 17     // DHT sensor is connected to the pin #17
-#define DHTTYPE DHT22   // DHT type is DHT22
+#define DHTTYPE DHT22 // DHT type is DHT22
 
 DHT dht(DHTPIN, DHTTYPE);
 float hum;  //Stores humidity value
 float temp; //Stores temperature value
 
+#define SWITCHPIN 7 // switch is connected to the pin #7
 
 // RTC definitions
 #define TIMER_REFRESH_CYCLE 1000
@@ -48,20 +57,7 @@ bool h12;
 bool PM;
 uint8_t hh, mm, ss;
 
-// Clock UI class
-SmartClockUI* clockUI = NULL;
-
-// commands processing block
-// we should handle both WiFi serial stream and a hardware serial
-String inputString = "";      // a String to hold incoming data
-String inputStringWiFi = "";  // a String to hold incoming data
-
 unsigned long timeForRefresh = 0; // the counter to detect when it is time to refresh the screen
-
-void loadConfig() {
-	//TODO To be completed
-	return;
-}
 
 void setup() {
 	Serial.begin(57600);
@@ -69,41 +65,23 @@ void setup() {
 		; // wait for serial port to connect. Needed for native USB port only
 	}
 
+	LOGGER_PRINTLN("Initializing setup...");
+
 	// Serial1 is where we connected a WiFi module
 	Serial1.begin(57600);
-
-	// reserve 200 bytes for the inputString:
-	inputString.reserve(200);
 
 	dht.begin();
 
 	Wire.begin();
 
-	clockUI = new SmartClockUI();
+	LOGGER_PRINTLN("Loading config...");
+	SmartClockConfig::loadConfig();
 
-	// load configuration from the SD card
-	loadConfig();
-}
+	LOGGER_PRINTLN("Initializing commander...");
+	SmartClockCommander::init(&Serial, &Serial1);
 
-/*
- * Process the command
- */
-void processCommand(const String command, bool isFromWiFi) {
-	// store the reference to the command source
-	HardwareSerial* serial = isFromWiFi ? &Serial1 : &Serial;
-
-	//TODO Handle commands here
-
-	serial->print("Received command: '");
-	serial->print(command);
-	serial->println("'");
-
-	//Print temp and humidity values
-	serial->print("Humidity: ");
-	serial->print(hum);
-	serial->print(" %, Temp: ");
-	serial->print(temp);
-	serial->println(" Celsius");
+	LOGGER_PRINTLN("Initializing ui...");
+	SmartClockUI::init();
 }
 
 /*
@@ -115,51 +93,12 @@ void processCommand(const String command, bool isFromWiFi) {
  */
 void serialEvent() {
 	while (Serial.available()) {
-		// check for string overflow
-		if(inputString.length()>150) {
-			Serial.println("Command is too long...");
-			inputString = "";
-		} else {
-			// get the new byte
-			char inChar = Serial.read();
-			// if the incoming character is a newline - process a complete command
-			if (inChar == '\n') {
-				inputString.trim();
-				processCommand(inputString, false);
-				inputString = "";
-			} else {
-				// add it to the inputString:
-				inputString += inChar;
-			}
-		}
+		SmartClockCommander::feedCharacter(0);
 	}
 }
-
-/*
- * This serial event handler deals with the WiFi serial stream
- */
 void serialEvent1() {
 	while (Serial1.available()) {
-		// check for string overflow
-		if(inputStringWiFi.length()>150) {
-			Serial1.println("Command is too long...");
-			inputStringWiFi = "";
-		} else {
-			// get the new byte
-			int inChar = Serial1.read();
-			// process only ASCII chars
-			if((inChar>9) && (inChar < 122)) {
-				// if the incoming character is a newline - process a complete command
-				if (inChar == '\n') {
-					inputStringWiFi.trim();
-					processCommand(inputStringWiFi, true);
-					inputStringWiFi = "";
-				} else {
-					// add it to the inputString:
-					inputStringWiFi += (char)inChar;
-				}
-			}
-		}
+		SmartClockCommander::feedCharacter(1);
 	}
 }
 
@@ -179,6 +118,6 @@ void loop() {
 			temp = dht.readTemperature();
 		}
 
-		clockUI->refreshScreen(hh, mm, ss, hum, temp);
+		SmartClockUI::refreshScreen(hh, mm, ss, hum, temp);
 	}
 }

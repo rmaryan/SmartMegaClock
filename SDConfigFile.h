@@ -19,14 +19,6 @@
 #include <Arduino.h>
 #include <SD.h>
 
-#ifdef SDCONFIGFILE_DEBUG
-  #define DEBUG_SDC_PRINT(x)    Serial.print (x)
-  #define DEBUG_SDC_PRINTLN(x)  Serial.println (x)
-#else
-  #define DEBUG_SDC_PRINT(x)
-  #define DEBUG_SDC_PRINTLN(x)
-#endif
-
 class SDConfigFile {
   private:
     File _file;           // the open configuration file
@@ -47,7 +39,8 @@ class SDConfigFile {
     boolean nameIs(const char *name);
     const char *getName();
     const char *getValue();
-    int getIntValue();
+    int getIntValue(char base = 10);
+    long getLongValue(char base = 10);
     boolean getBooleanValue();
     char *copyValue();
 
