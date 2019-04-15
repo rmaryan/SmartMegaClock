@@ -3,9 +3,9 @@
  *
  * Used components:
  * - Ardiono MEGA 2560
- * - LCD screen 320x480 HX8357B
+ * - TFT screen 320x480 HX8357B
  * - Temperature sensor DHT22
- * - Wifi module ES-01 connected to Serial1
+ * - Wifi module ESP-M2 DT-06 connected to Serial1
  * - RTC module DS3231
  * - Simple toggle switch - connected to pin #7
  *

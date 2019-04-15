@@ -26,7 +26,7 @@ The clock can be powered by any USB power source.
 
 ## Schematics
 
-[TBC]
+![Smart Clock Schematics](/schematics/smart_clock_schematics.png)
 
 ## WiFi module set up
 
