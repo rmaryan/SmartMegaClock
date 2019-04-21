@@ -28,14 +28,17 @@
  */
 class SmartClockCommander {
 private:
-	static const char* CMD_ERROR_TL;  // Command too long error message
 	static char inputString0 [];      // a String to hold incoming data
 	static char inputString1 [];      // a String to hold incoming data
 	static HardwareSerial* serial0;
 	static HardwareSerial* serial1;
+	static char commandString []; // containers for parts of the command parsed by parseCommand()
+	static char commandParam1 [];
+	static char commandParam2 [];
 
 	static char* strtrim(char* str); // a helper method which trims the string
-	static void processCommand(HardwareSerial* in_serial, const char* command); // the command processing core
+	static void parseCommand(char* command); // function splits the string to command and parameters
+	static void processCommand(HardwareSerial* in_serial, char* command); // the command processing core
 
 public:
 	static void init(HardwareSerial* in_serial0, HardwareSerial* in_serial1);

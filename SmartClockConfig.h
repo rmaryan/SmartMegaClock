@@ -50,13 +50,14 @@ private:
 	static char buffer[10];
 
 public:
-	static uint8_t  configFontPreset;
+	static uint8_t  cnfFontPreset;
 	static bool     cnfShowDate;
 	static uint16_t cnfColorTime;
 	static uint16_t cnfColorDate;
 	static uint16_t cnfColorHum;
 	static uint16_t cnfColorTemp;
 
+	static void setDefaults();
 	static void loadConfig();
 	static void saveConfig();
 };

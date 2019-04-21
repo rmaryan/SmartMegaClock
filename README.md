@@ -28,28 +28,40 @@ The clock can be powered by any USB power source.
 
 ![Smart Clock Schematics](/schematics/smart_clock_schematics.png)
 
-## WiFi module set up
+## Initial Setup
 
-On the initial boot, WiFi module starts own WiFi network (in our case - "Doit_WiFi_xxxxxx"). Connect to this network and access the configuration page
+Place the sdcard folder content to the root of the SD card.
+
+Upload the firmware to Arduino MEGA.
+
+Configure the WiFi module:
+ * On the initial boot, WiFi module starts own WiFi network (in our case - "Doit_WiFi_xxxxxx"). Connect to this network and access the configuration page
 with a web browser (in our case 192.168.4.1). 
 
-Set up the network according to your module documentation. To employ the CLI functionality, switch to the TCP server mode. Thus you can use telnet client to connect to the clock.
+ * Set up the network according to your module documentation. To employ the CLI functionality, switch to the TCP server mode. Thus you can use telnet client to connect to the clock.
 
-Make sure to set the serial port speed to 57600 baud to match the speed in the clock source code.
+ * Make sure to set the serial port speed to 57600 baud to match the speed in the clock source code.
 
 ## CLI Commands <implementation pending>
 
-`fonts [X]` - select the font preset #X (X is a number from 1 to 5). If no parameter specified - current font # is shown. Example: `fonts 2`
+`fonts [X]` - select the font preset #X (X is a number from 1 to 5). If no parameter specified - current font # is shown. 
+Example: `fonts 2`
 
-`time [HH:MM]` - set the clock time (in 24-hours format). If no parameter specified - current time is shown. Example: `time 12:31`
+`time [HH:MM]` - set the clock time (in 24-hours format). If no parameter specified - current time is shown. 
+Example: `time 12:31`
 
-`date [DD/MM/YYY]` - set the clock date. If no parameter specified - current date is shown. Example: `date 21/12/2019`
+`date [DD/MM/YYY]` - set the clock date. If no parameter specified - current date is shown. 
+Example: `date 21/12/2019`
 
-`showdate [Y | N]` - turns the date indication on or off. If no parameter specified - current state is shown. Example: `showdate Y`
+`showdate [Y | N]` - turns the date indication on or off. If no parameter specified - current state is shown.
+Example: `showdate Y`
 
-`color [time | date | hum | temp  0x123456]` - set the RGB color for the area specified. Please note, RGB colors are converted to 16-bit RGB565 format (since our screen works with the 16-bit colors only). If no parameter specified - current colors are listed.  Example" `color date 0xFF5a20`
+`color [time | date | hum | temp  0x123456]` - set the RGB color for the area specified. Please note, RGB colors are converted to 16-bit RGB565 format (since our screen works with the 16-bit colors only). If no parameter specified - current colors are listed.  
+Example" `color date 0xFF5a20`
 
 `reset` - reset colors and showdate flag to the factory default state. The configuration file is wiped.
+
+`help` - show the help information about the supported commands.
 
 
 ## Used Libraries

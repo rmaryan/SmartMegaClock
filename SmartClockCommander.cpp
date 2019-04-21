@@ -18,17 +18,25 @@
  */
 
 #include "SmartClockCommander.h"
+#include <errno.h>
 #include "log.h"
+#include "SmartClockConfig.h"
+#include "SmartClockUI.h"
+#include "SmartClockSensors.h"
 
 #define CMD_MAX_STRING 200
-
-const char* SmartClockCommander::CMD_ERROR_TL = "Command is too long...";
+const char* CMD_ERROR_TL = "Command is too long...";
 
 char SmartClockCommander::inputString0 [CMD_MAX_STRING] = "";
 char SmartClockCommander::inputString1 [CMD_MAX_STRING] = "";
 
 HardwareSerial* SmartClockCommander::serial0 = 0;
 HardwareSerial* SmartClockCommander::serial1 = 0;
+
+char SmartClockCommander::commandString [CMD_MAX_STRING] = "";
+char SmartClockCommander::commandParam1 [CMD_MAX_STRING] = "";
+char SmartClockCommander::commandParam2 [CMD_MAX_STRING] = "";
+
 
 char* SmartClockCommander::strtrim(char* str) {
 	// jump to the first non-empty character
@@ -48,18 +56,152 @@ char* SmartClockCommander::strtrim(char* str) {
 }
 
 void SmartClockCommander::processCommand(HardwareSerial* in_serial,
-		const char* command) {
+		char* command) {
+	const char* CMD_FONTS = "fonts";
+	const char* CMD_TIME = "time";
+	const char* CMD_DATE = "date";
+	const char* CMD_SHOWDATE = "showdate";
+	const char* CMD_COLOR = "color";
+	const char* CMD_COLOR_TIME = "time";
+	const char* CMD_COLOR_DATE = "date";
+	const char* CMD_COLOR_HUM = "hum";
+	const char* CMD_COLOR_TEMP = "temp";
+	const char* CMD_RESET = "reset";
+	const char* CMD_EQUALS = " = ";
+	const char* CMD_EQUALS_HEX = " = 0x";
+	const char* CMD_HELP = "help";
+	const char* CMD_HELP_TEXT =
+			"fonts [X] - select the font preset #X (X is a number from 1 to 5). If no parameter specified - current font # is shown.\n\
+\n\
+time [HH:MM] - set the clock time (in 24-hours format). If no parameter specified - current time is shown.\n\
+\n\
+date [DD/MM/YYY] - set the clock date. If no parameter specified - current date is shown.\n\
+\n\
+showdate [Y | N] - turns the date indication on or off. If no parameter specified - current state is shown.\n\
+\n\
+color [time | date | hum | temp  0x123456] - set the RGB color for the area specified.\n\
+Please note, RGB colors are converted to 16-bit RGB565 format (since our screen works with the 16-bit colors only).\n\
+If no parameter specified - current colors are listed.\n\
+\n\
+reset - reset colors and showdate flag to the factory default state. The configuration file is wiped.\n\
+\n\
+help - show this help information.";
 
-	in_serial->print("Received command: '");
-	in_serial->print(command);
-	in_serial->println("'");
+	const char* CMD_ERROR_UNKN = "Command is unknown";
+	const char* CMD_ERROR_PARAM_UNKN = "Can't process parameter";
 
-	// TODO Handle commands here
+	parseCommand(command);
+
+	// do actual commands processing
+	if(strcmp(commandString, CMD_FONTS)==0) {
+		// show current status
+		if(!commandParam1[0]) {
+			in_serial->print(CMD_FONTS);
+			in_serial->print(CMD_EQUALS);
+			in_serial->println(SmartClockConfig::cnfFontPreset);
+		} else {
+			errno = 0;
+			long longValue = strtol(commandParam1, NULL, 10);
+			if(errno || (longValue < 0) || (longValue > 4)) {
+				in_serial->println(CMD_ERROR_PARAM_UNKN);
+			} else {
+				SmartClockConfig::cnfFontPreset = longValue;
+				SmartClockConfig::saveConfig();
+				SmartClockUI::setForceRefresh();
+			}
+		}
+	} else if(strcmp(commandString, CMD_TIME)==0) {
+		if(!commandParam1[0]) {
+			bool h12;
+			bool PM;
+			in_serial->print(SmartClockSensors::clock.getHour(h12, PM));
+			in_serial->print(":");
+			in_serial->print(SmartClockSensors::clock.getMinute());
+			in_serial->print(":");
+			in_serial->print(SmartClockSensors::clock.getSecond());
+		} else {
+			// TODO SET TIME
+		}
+	} else if(strcmp(commandString, CMD_DATE)==0) {
+		if(!commandParam1[0]) {
+			bool Century = false;
+			in_serial->print(SmartClockSensors::clock.getDate());
+			in_serial->print("/");
+			in_serial->print(SmartClockSensors::clock.getMonth(Century));
+			in_serial->print("/");
+			in_serial->print(SmartClockSensors::clock.getYear());
+		} else {
+			// TODO SET DATE
+			SmartClockUI::setForceRefresh();
+		}
+	} else if(strcmp(commandString, CMD_SHOWDATE)==0) {
+		if(!commandParam1[0]) {
+			in_serial->print("Showing date = ");
+			in_serial->println(SmartClockConfig::cnfShowDate?"Y":"N");
+		} else {
+			// TODO SET SHOW DATE
+
+			SmartClockConfig::saveConfig();
+			SmartClockUI::setForceRefresh();
+		}
+	} else if(strcmp(commandString, CMD_COLOR)==0) {
+		if(!commandParam1[0]) {
+			in_serial->print(CMD_COLOR_TIME);
+			in_serial->print(CMD_EQUALS_HEX);
+			in_serial->println(SmartClockConfig::cnfColorTime, HEX);
+			in_serial->print(CMD_COLOR_DATE);
+			in_serial->print(CMD_EQUALS_HEX);
+			in_serial->println(SmartClockConfig::cnfColorDate, HEX);
+			in_serial->print(CMD_COLOR_HUM);
+			in_serial->print(CMD_EQUALS_HEX);
+			in_serial->println(SmartClockConfig::cnfColorHum, HEX);
+			in_serial->print(CMD_COLOR_TEMP);
+			in_serial->print(CMD_EQUALS_HEX);
+			in_serial->println(SmartClockConfig::cnfColorTemp, HEX);
+		} else {
+			// TODO SET COLOR
+			// show message "Converted to..."
+
+			SmartClockConfig::saveConfig();
+			SmartClockUI::setForceRefresh();
+		}
+	} else if(strcmp(commandString, CMD_RESET)==0) {
+		SmartClockConfig::setDefaults();
+		SmartClockConfig::saveConfig();
+		SmartClockUI::setForceRefresh();
+	} else if(strcmp(commandString, CMD_HELP)==0) {
+		in_serial->println(CMD_HELP_TEXT);
+	} else {
+		in_serial->println(CMD_ERROR_UNKN);
+	}
 }
 
 void SmartClockCommander::init(HardwareSerial* in_serial0, HardwareSerial* in_serial1) {
 	serial0 = in_serial0;
 	serial1 = in_serial1;
+}
+
+void SmartClockCommander::parseCommand(char* command) {
+	commandString[0] = 0;
+	commandParam1[0] = 0;
+	commandParam2[0] = 0;
+
+	// start splitting the string
+	char * pch = strtok (command," ");
+	if(pch != NULL) {
+		// copy command string
+		strncat(commandString, pch, CMD_MAX_STRING);
+		// look for parameters
+		pch = strtok (NULL, " ");
+		if(pch != NULL) {
+			strncat(commandParam1, pch, CMD_MAX_STRING);
+			pch = strtok (NULL, " ");
+			if(pch != NULL) {
+				strncat(commandParam2, pch, CMD_MAX_STRING);
+			}
+
+		}
+	}
 }
 
 void SmartClockCommander::feedCharacter(uint8_t serialID) {
@@ -79,7 +221,7 @@ void SmartClockCommander::feedCharacter(uint8_t serialID) {
 	size_t stringLength = strlen(inputString);
 
 	// check for string overflow
-	if(stringLength>150) {
+	if(stringLength>CMD_MAX_STRING) {
 		Serial.println(CMD_ERROR_TL);
 		inputString[0] = 0;
 	} else {

@@ -20,6 +20,7 @@
 #include "SmartClockUI.h"
 
 #include "SmartClockConfig.h"
+#include "SmartClockSensors.h"
 
 #include "log.h"
 
@@ -30,6 +31,7 @@ char* SmartClockUI::NIGHT_ICON_FILE = (char *)"moon.bmp"; // night icon file nam
 uint8_t SmartClockUI::omm;
 uint16_t SmartClockUI::xcolon;
 uint16_t SmartClockUI::xsecs;
+bool SmartClockUI::forceRefresh = true;
 uint8_t SmartClockUI::partOfDay;
 TFT_HX8357 SmartClockUI::tft;
 
@@ -205,7 +207,30 @@ void SmartClockUI::drawBMP(char* filename, int x, int y, boolean flip) {
 	bmpFile.close();
 }
 
-void SmartClockUI::refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, float temp) {
+void SmartClockUI::setForceRefresh() {
+	forceRefresh = true;
+}
+
+void SmartClockUI::refreshScreen() {
+	bool h12;
+	bool PM;
+	uint8_t hh, mm, ss;
+	float hum;  //Stores humidity value
+	float temp; //Stores temperature value
+
+	// Get the hour, minute, and second
+	hh = SmartClockSensors::clock.getHour(h12, PM);
+	mm = SmartClockSensors::clock.getMinute();
+	ss = SmartClockSensors::clock.getSecond();
+	hum = 0;
+	temp = 0;
+	if (!(ss % 10)) {
+		//Read the humidity and temperature values
+		hum = SmartClockSensors::dht.readHumidity();
+		temp = SmartClockSensors::dht.readTemperature();
+	}
+
+
 	uint16_t xpos = HOURS_LEFT;
 	uint16_t ypos = HOURS_TOP;
 	int ysecs = ypos + SECONDS_TOP_SHIFT;
@@ -242,12 +267,13 @@ void SmartClockUI::refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, 
 
 	tft.drawNumber(ss, xpos, ysecs, 6);            // Draw seconds
 
-	// this block is going to be executed every tenth second
-	if (!(ss % 10)) {
+	// this block is going to be executed every tenth second or when forced
+	if (!(ss % 10) || forceRefresh) {
 		//Read the humidity and temperature values
 		int xpos_t = TEMP_LEFT;
 		int ypos_t = HUM_TEMP_TOP;
 		int xpos_h = HUM_LEFT;
+		forceRefresh = false;
 
 		tft.fillRect(xpos_t, ypos_t, TEMP_RIGHT, tft.height() - ypos_t, BG_COLOR);
 

@@ -25,37 +25,19 @@
  *
  */
 
-// TODO Draw schematics
 // TODO Create commands processing class
 // TODO Implement dimming mode
 
-#include <DHT.h>
-#include <DS3231.h>
 #include <Wire.h>
 
 #include "SmartClockUI.h"
 #include "SmartClockConfig.h"
 #include "SmartClockCommander.h"
+#include "SmartClockSensors.h"
 
 #include "log.h"
 
-// Initialize DHT sensor
-#define DHTPIN 17     // DHT sensor is connected to the pin #17
-#define DHTTYPE DHT22 // DHT type is DHT22
-
-DHT dht(DHTPIN, DHTTYPE);
-float hum;  //Stores humidity value
-float temp; //Stores temperature value
-
-#define SWITCHPIN 7 // switch is connected to the pin #7
-
-// RTC definitions
 #define TIMER_REFRESH_CYCLE 1000
-
-DS3231 clock;
-bool h12;
-bool PM;
-uint8_t hh, mm, ss;
 
 unsigned long timeForRefresh = 0; // the counter to detect when it is time to refresh the screen
 
@@ -70,7 +52,7 @@ void setup() {
 	// Serial1 is where we connected a WiFi module
 	Serial1.begin(57600);
 
-	dht.begin();
+	SmartClockSensors::init();
 
 	Wire.begin();
 
@@ -105,19 +87,6 @@ void serialEvent1() {
 void loop() {
 	if(millis() > timeForRefresh) {
 		timeForRefresh = millis()+TIMER_REFRESH_CYCLE;
-
-		// Get the hour, minute, and second
-		hh = clock.getHour(h12, PM);
-		mm = clock.getMinute();
-		ss = clock.getSecond();
-		hum = 0;
-		temp = 0;
-		if (!(ss % 10)) {
-			//Read the humidity and temperature values
-			hum = dht.readHumidity();
-			temp = dht.readTemperature();
-		}
-
-		SmartClockUI::refreshScreen(hh, mm, ss, hum, temp);
+		SmartClockUI::refreshScreen();
 	}
 }

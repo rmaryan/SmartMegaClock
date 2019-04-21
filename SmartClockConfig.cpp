@@ -31,22 +31,26 @@ const char * SmartClockConfig::CNF_KEY_COLOR_TIME = "color_time";
 const char * SmartClockConfig::CNF_KEY_COLOR_DATE = "color_date";
 const char * SmartClockConfig::CNF_KEY_COLOR_HUM = "color_hum";
 const char * SmartClockConfig::CNF_KEY_COLOR_TEMP = "color_temp";
-uint8_t  SmartClockConfig::configFontPreset;
+char SmartClockConfig::buffer[10];
+uint8_t  SmartClockConfig::cnfFontPreset;
 bool     SmartClockConfig::cnfShowDate;
 uint16_t SmartClockConfig::cnfColorTime;
 uint16_t SmartClockConfig::cnfColorDate;
 uint16_t SmartClockConfig::cnfColorHum;
 uint16_t SmartClockConfig::cnfColorTemp;
 
-
-void SmartClockConfig::loadConfig() {
-	// set the configuration defaults
-	configFontPreset = CNF_DEFAULT_FONT_PRESET;
+void SmartClockConfig::setDefaults() {
+	cnfFontPreset = CNF_DEFAULT_FONT_PRESET;
 	cnfShowDate = CNF_DEFAULT_SHOW_DATE;
 	cnfColorTime = CNF_DEFAULT_COLOR_TIME;
 	cnfColorDate = CNF_DEFAULT_COLOR_DATE;
 	cnfColorHum = CNF_DEFAULT_COLOR_HUM;
 	cnfColorTemp = CNF_DEFAULT_COLOR_TEMP;
+}
+
+void SmartClockConfig::loadConfig() {
+
+	setDefaults();
 
 	// try to open a config file
 	if (!sdCnfFile.begin(CNF_FILE_NAME, CNF_MAX_LINE_LENGHT)) {
@@ -60,7 +64,7 @@ void SmartClockConfig::loadConfig() {
 		if (sdCnfFile.nameIs(CNF_KEY_FONTS)) {
 			int intValue = sdCnfFile.getIntValue();
 			if(intValue > 0) {
-				configFontPreset = intValue;
+				cnfFontPreset = intValue;
 			}
 		} else if (sdCnfFile.nameIs(CNF_KEY_SHOWDATE)) {
 			cnfShowDate = sdCnfFile.getBooleanValue();
@@ -99,7 +103,7 @@ void SmartClockConfig::saveConfig() {
 		return;
 	}
 
-	if(sprintf(buffer, "%d", configFontPreset)>0) {
+	if(sprintf(buffer, "%d", cnfFontPreset)>0) {
 		sdCnfFile.writeSetting(CNF_KEY_FONTS, buffer);
 	}
 

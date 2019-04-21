@@ -61,6 +61,8 @@ private:
 	static uint16_t xcolon;
 	static uint16_t xsecs;
 
+	static bool forceRefresh;
+
 	/*
 	 * Indicates which icon is being shown on a screen
 	 * 0 - unknown
@@ -86,7 +88,8 @@ private:
 
 public:
 	static void init();
-	static void refreshScreen(uint8_t hh, uint8_t mm, uint8_t ss, float hum, float temp);
+	static void setForceRefresh();
+	static void refreshScreen();
 };
 
 #endif /* SMARTCLOCKUI_H_ */
