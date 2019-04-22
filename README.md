@@ -50,7 +50,7 @@ Example: `fonts 2`
 `time [HH:MM]` - set the clock time (in 24-hours format). If no parameter specified - current time is shown. 
 Example: `time 12:31`
 
-`date [DD/MM/YYY]` - set the clock date. If no parameter specified - current date is shown. 
+`date [DD/MM/YYYY]` - set the clock date. If no parameter specified - current date is shown. 
 Example: `date 21/12/2019`
 
 `showdate [Y | N]` - turns the date indication on or off. If no parameter specified - current state is shown.

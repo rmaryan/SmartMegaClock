@@ -224,7 +224,7 @@ void SmartClockUI::refreshScreen() {
 	ss = SmartClockSensors::clock.getSecond();
 	hum = 0;
 	temp = 0;
-	if (!(ss % 10)) {
+	if (!(ss % 10) || forceRefresh) {
 		//Read the humidity and temperature values
 		hum = SmartClockSensors::dht.readHumidity();
 		temp = SmartClockSensors::dht.readTemperature();
@@ -236,7 +236,7 @@ void SmartClockUI::refreshScreen() {
 	int ysecs = ypos + SECONDS_TOP_SHIFT;
 
 	tft.setTextColor(SmartClockConfig::cnfColorTime, BG_COLOR);
-	if (omm != mm) { // Redraw hours and minutes time every minute
+	if ((omm != mm) || forceRefresh) { // Redraw hours and minutes time every minute
 		omm = mm;
 		// Draw hours and minutes
 		if (hh < 10)
