@@ -37,12 +37,15 @@
  */
 class SmartClockUI {
 private:
-	static const uint16_t HOURS_LEFT = 115; // top boundary of the hours text
-	static const uint16_t HOURS_TOP = 85; // left boundary of the hours text
+	static const uint16_t HOURS_LEFT = 115; // left boundary of the hours text
+	static const uint16_t HOURS_TOP = 85; // top boundary of the hours text
+	static const uint16_t HOURS_WITH_DATE_TOP = 70; // if the date is shown - draw hours a bit higher
 	static const uint16_t SECONDS_TOP_SHIFT = 24; // seconds top shift from the hours text
 	static const uint16_t ICON_TOP = 210; // top boundary of the icon
 	static const uint16_t ICON_LEFT = 10; // left boundary of the icon
 	static const uint16_t TEMP_LEFT = 45; // left boundary of the temperature text
+	static const uint16_t DATE_LEFT = 140; // left boundary of the hours text
+	static const uint16_t DATE_TOP = 190; // top boundary of the hours text
 	static const uint16_t TEMP_RIGHT = 240; // right boundary of the temperature text
 	static const uint16_t HUM_LEFT = 360; // left boundary of the humidity text
 	static const uint16_t HUM_TEMP_TOP = 260; // top boundary of the temp/humidity text
@@ -58,10 +61,17 @@ private:
 	static char* NIGHT_ICON_FILE; // night icon file name on SD
 
 	static uint8_t omm;
+	static uint8_t oday;
 	static uint16_t xcolon;
 	static uint16_t xsecs;
 
+	static uint16_t colorTime;
+	static uint16_t colorDate;
+	static uint16_t colorHum;
+	static uint16_t colorTemp;
+
 	static bool forceRefresh;
+	static bool dimmed;
 
 	/*
 	 * Indicates which icon is being shown on a screen
@@ -89,6 +99,7 @@ private:
 public:
 	static void init();
 	static void setForceRefresh();
+	static void switchDimmed(int dimmedState);
 	static void refreshScreen();
 };
 

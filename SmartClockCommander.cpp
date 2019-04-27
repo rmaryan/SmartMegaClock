@@ -57,7 +57,6 @@ char* SmartClockCommander::strtrim(char* str) {
 
 void SmartClockCommander::processCommand(HardwareSerial* in_serial,
 		char* command) {
-	const char* CMD_FONTS = "fonts";
 	const char* CMD_TIME = "time";
 	const char* CMD_DATE = "date";
 	const char* CMD_SHOWDATE = "showdate";
@@ -67,13 +66,10 @@ void SmartClockCommander::processCommand(HardwareSerial* in_serial,
 	const char* CMD_COLOR_HUM = "hum";
 	const char* CMD_COLOR_TEMP = "temp";
 	const char* CMD_RESET = "reset";
-	const char* CMD_EQUALS = " = ";
 	const char* CMD_EQUALS_HEX = " = 0x";
 	const char* CMD_HELP = "help";
 	const char* CMD_HELP_TEXT =
 			"Supported commands:\n\r\
-\n\r\
-fonts [X] - select the font preset #X (X is a number from 1 to 5). If no parameter specified - current font # is shown.\n\r\
 \n\r\
 time [HH:MM] - set the clock time (in 24-hours format). If no parameter specified - current time is shown.\n\r\
 \n\r\
@@ -95,24 +91,7 @@ help - show this help information.";
 	parseCommand(command);
 
 	// do actual commands processing
-	if(strcmp(commandString, CMD_FONTS)==0) {
-		// show current status
-		if(!commandParam1[0]) {
-			in_serial->print(CMD_FONTS);
-			in_serial->print(CMD_EQUALS);
-			in_serial->println(SmartClockConfig::cnfFontPreset);
-		} else {
-			errno = 0;
-			long longValue = strtol(commandParam1, NULL, 10);
-			if(errno || (longValue < 0) || (longValue > 4)) {
-				in_serial->println(CMD_ERROR_PARAM_UNKN);
-			} else {
-				SmartClockConfig::cnfFontPreset = longValue;
-				SmartClockConfig::saveConfig();
-				SmartClockUI::setForceRefresh();
-			}
-		}
-	} else if(strcmp(commandString, CMD_TIME)==0) {
+	if(strcmp(commandString, CMD_TIME)==0) {
 		if(!commandParam1[0]) {
 			bool h12;
 			bool PM;

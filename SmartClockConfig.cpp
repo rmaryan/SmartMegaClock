@@ -25,14 +25,12 @@
 
 SDConfigFile SmartClockConfig::sdCnfFile;
 const char * SmartClockConfig::CNF_FILE_NAME = "settings.txt";
-const char * SmartClockConfig::CNF_KEY_FONTS = "fonts";
 const char * SmartClockConfig::CNF_KEY_SHOWDATE = "showdate";
 const char * SmartClockConfig::CNF_KEY_COLOR_TIME = "color_time";
 const char * SmartClockConfig::CNF_KEY_COLOR_DATE = "color_date";
 const char * SmartClockConfig::CNF_KEY_COLOR_HUM = "color_hum";
 const char * SmartClockConfig::CNF_KEY_COLOR_TEMP = "color_temp";
 char SmartClockConfig::buffer[10];
-uint8_t  SmartClockConfig::cnfFontPreset;
 bool     SmartClockConfig::cnfShowDate;
 uint16_t SmartClockConfig::cnfColorTime;
 uint16_t SmartClockConfig::cnfColorDate;
@@ -40,7 +38,6 @@ uint16_t SmartClockConfig::cnfColorHum;
 uint16_t SmartClockConfig::cnfColorTemp;
 
 void SmartClockConfig::setDefaults() {
-	cnfFontPreset = CNF_DEFAULT_FONT_PRESET;
 	cnfShowDate = CNF_DEFAULT_SHOW_DATE;
 	cnfColorTime = CNF_DEFAULT_COLOR_TIME;
 	cnfColorDate = CNF_DEFAULT_COLOR_DATE;
@@ -61,30 +58,40 @@ void SmartClockConfig::loadConfig() {
 
 	// Read each setting from the file.
 	while (sdCnfFile.readNextSetting()) {
-		if (sdCnfFile.nameIs(CNF_KEY_FONTS)) {
-			int intValue = sdCnfFile.getIntValue();
-			if(intValue > 0) {
-				cnfFontPreset = intValue;
-			}
-		} else if (sdCnfFile.nameIs(CNF_KEY_SHOWDATE)) {
+		if (sdCnfFile.nameIs(CNF_KEY_SHOWDATE)) {
 			cnfShowDate = sdCnfFile.getBooleanValue();
+			LOGGER_PRINT(CNF_KEY_SHOWDATE);
+			LOGGER_PRINT("=");
+			LOGGER_PRINTLN(cnfShowDate);
 		} else if (sdCnfFile.nameIs(CNF_KEY_COLOR_TIME)) {
 			long longValue = sdCnfFile.getLongValue(16);
+			LOGGER_PRINT(CNF_KEY_COLOR_TIME);
+			LOGGER_PRINT("=");
+			LOGGER_PRINTLN(longValue);
 			if(errno == 0) {
 				cnfColorTime = longValue;
 			}
 		} else if (sdCnfFile.nameIs(CNF_KEY_COLOR_DATE)) {
 			long longValue = sdCnfFile.getLongValue(16);
+			LOGGER_PRINT(CNF_KEY_COLOR_DATE);
+			LOGGER_PRINT("=");
+			LOGGER_PRINTLN(longValue);
 			if(errno == 0) {
 				cnfColorDate = longValue;
 			}
 		} else if (sdCnfFile.nameIs(CNF_KEY_COLOR_HUM)) {
 			long longValue = sdCnfFile.getLongValue(16);
+			LOGGER_PRINT(CNF_KEY_COLOR_HUM);
+			LOGGER_PRINT("=");
+			LOGGER_PRINTLN(longValue);
 			if(errno == 0) {
 				cnfColorHum = longValue;
 			}
 		} else if (sdCnfFile.nameIs(CNF_KEY_COLOR_TEMP)) {
 			long longValue = sdCnfFile.getLongValue(16);
+			LOGGER_PRINT(CNF_KEY_COLOR_TEMP);
+			LOGGER_PRINT("=");
+			LOGGER_PRINTLN(longValue);
 			if(errno == 0) {
 				cnfColorTemp = longValue;
 			}
@@ -101,10 +108,6 @@ void SmartClockConfig::saveConfig() {
 		LOGGER_PRINT("Failed to write configuration file: ");
 		LOGGER_PRINTLN(CNF_FILE_NAME);
 		return;
-	}
-
-	if(sprintf(buffer, "%d", cnfFontPreset)>0) {
-		sdCnfFile.writeSetting(CNF_KEY_FONTS, buffer);
 	}
 
 	sdCnfFile.writeSetting(CNF_KEY_SHOWDATE, cnfShowDate?"Y":"N");

@@ -24,6 +24,8 @@ The clock screen can be dimmed using a manual switch.
 
 The clock can be powered by any USB power source.
 
+![Look and feel](/schematics/smart_clock.png)
+
 ## Schematics
 
 ![Smart Clock Schematics](/schematics/smart_clock_schematics.png)
@@ -44,9 +46,6 @@ with a web browser (in our case 192.168.4.1).
 
 ## CLI Commands <implementation pending>
 
-`fonts [X]` - select the font preset #X (X is a number from 1 to 5). If no parameter specified - current font # is shown. 
-Example: `fonts 2`
-
 `time [HH:MM]` - set the clock time (in 24-hours format). If no parameter specified - current time is shown. 
 Example: `time 12:31`
 
@@ -63,6 +62,11 @@ Example" `color date 0xFF5a20`
 
 `help` - show the help information about the supported commands.
 
+## Possible Future Features
+
+1. Add light sensor and dim the screen automatically when it gets dark.
+2. Add buzzer and implement wake up alarm.
+3. Connect clock to some IoT platform and feed the temperature and humidity data to some dashboard.
 
 ## Used Libraries
 

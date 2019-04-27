@@ -294,7 +294,7 @@ boolean SDConfigFile::beginWrite(const char* configFileName, uint8_t maxLineLeng
 		return false;
 	}
 
-	_file = SD.open(configFileName, FILE_WRITE);
+	_file = SD.open(configFileName, O_READ | O_WRITE | O_CREAT);
 	if (!_file) {
 		LOGGER_PRINT("Could not open SD file to write: ");
 		LOGGER_PRINTLN(configFileName);

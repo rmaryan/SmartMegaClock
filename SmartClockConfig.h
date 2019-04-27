@@ -33,14 +33,12 @@ private:
 	static const uint8_t CNF_MAX_LINE_LENGHT = 40;
 
 	static const char * CNF_FILE_NAME;
-	static const char * CNF_KEY_FONTS;
 	static const char * CNF_KEY_SHOWDATE;
 	static const char * CNF_KEY_COLOR_TIME;
 	static const char * CNF_KEY_COLOR_DATE;
 	static const char * CNF_KEY_COLOR_HUM;
 	static const char * CNF_KEY_COLOR_TEMP;
 
-	static const uint8_t  CNF_DEFAULT_FONT_PRESET = 1;
 	static const bool     CNF_DEFAULT_SHOW_DATE = false;
 	static const uint16_t CNF_DEFAULT_COLOR_TIME = TFT_YELLOW;
 	static const uint16_t CNF_DEFAULT_COLOR_DATE = TFT_YELLOW;
@@ -50,7 +48,6 @@ private:
 	static char buffer[10];
 
 public:
-	static uint8_t  cnfFontPreset;
 	static bool     cnfShowDate;
 	static uint16_t cnfColorTime;
 	static uint16_t cnfColorDate;

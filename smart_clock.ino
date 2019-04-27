@@ -25,9 +25,6 @@
  *
  */
 
-// TODO Create commands processing class
-// TODO Implement dimming mode
-
 #include <Wire.h>
 
 #include "SmartClockUI.h"
@@ -38,8 +35,10 @@
 #include "log.h"
 
 #define TIMER_REFRESH_CYCLE 1000
+#define SWITCH_PIN 7
 
 unsigned long timeForRefresh = 0; // the counter to detect when it is time to refresh the screen
+int lastDimSwitchState = -1;
 
 void setup() {
 	Serial.begin(57600);
@@ -56,14 +55,16 @@ void setup() {
 
 	Wire.begin();
 
+	LOGGER_PRINTLN("Initializing ui...");
+	SmartClockUI::init();
+
 	LOGGER_PRINTLN("Loading config...");
 	SmartClockConfig::loadConfig();
 
 	LOGGER_PRINTLN("Initializing commander...");
 	SmartClockCommander::init(&Serial, &Serial1);
 
-	LOGGER_PRINTLN("Initializing ui...");
-	SmartClockUI::init();
+	pinMode(SWITCH_PIN, INPUT);
 }
 
 /*
@@ -86,6 +87,12 @@ void serialEvent1() {
 
 void loop() {
 	if(millis() > timeForRefresh) {
+		int dimState = digitalRead(SWITCH_PIN);
+		if(dimState!=lastDimSwitchState) {
+			SmartClockUI::setForceRefresh();
+			SmartClockUI::switchDimmed(dimState);
+			lastDimSwitchState = dimState;
+		}
 		timeForRefresh = millis()+TIMER_REFRESH_CYCLE;
 		SmartClockUI::refreshScreen();
 	}

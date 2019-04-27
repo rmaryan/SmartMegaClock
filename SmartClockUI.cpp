@@ -24,19 +24,33 @@
 
 #include "log.h"
 
+#define FONT_L1 8
+#define FONT_L2 1
+#define FONT_SECONDS 6
+#define FONT_L3 7
+#define FONT_DEGREE 4
+
 char* SmartClockUI::TEMP_UOM_LABEL = (char *)"C"; // temperature unit of measure label
 char* SmartClockUI::HUM_UOM_LABEL = (char *)"%";  // humidity unit of measure label
 char* SmartClockUI::DAY_ICON_FILE = (char *)"sun.bmp"; // day icon file name on SD
 char* SmartClockUI::NIGHT_ICON_FILE = (char *)"moon.bmp"; // night icon file name on SD
 uint8_t SmartClockUI::omm;
+uint8_t SmartClockUI::oday;
 uint16_t SmartClockUI::xcolon;
 uint16_t SmartClockUI::xsecs;
+uint16_t SmartClockUI::colorTime;
+uint16_t SmartClockUI::colorDate;
+uint16_t SmartClockUI::colorHum;
+uint16_t SmartClockUI::colorTemp;
+
 bool SmartClockUI::forceRefresh = true;
+bool SmartClockUI::dimmed = false;
 uint8_t SmartClockUI::partOfDay;
 TFT_HX8357 SmartClockUI::tft;
 
 void SmartClockUI::init() {
 	omm = 99;
+	oday = 99;
 	xcolon = 0;
 	xsecs = 0;
 	partOfDay = 0;
@@ -113,7 +127,7 @@ void SmartClockUI::drawBMP(char* filename, int x, int y, boolean flip) {
 
 	// Check file exists and open it
 	Serial.println(filename);
-	if ((bmpFile = SD.open(filename)) == NULL) {
+	if (!(bmpFile = SD.open(filename))) {
 		Serial.println(F(" File not found"));
 		return;
 	}
@@ -211,10 +225,26 @@ void SmartClockUI::setForceRefresh() {
 	forceRefresh = true;
 }
 
+void SmartClockUI::switchDimmed(int dimmedState) {
+	if(dimmedState == HIGH) {
+		// set the dimmed colors
+		SmartClockUI::colorTime = 0xC618;
+		SmartClockUI::colorDate = 0xC618;
+		SmartClockUI::colorHum = 0xC618;
+		SmartClockUI::colorTemp = 0xC618;
+	} else {
+		// set the normal colors
+		SmartClockUI::colorTime = SmartClockConfig::cnfColorTime;
+		SmartClockUI::colorDate = SmartClockConfig::cnfColorDate;
+		SmartClockUI::colorHum = SmartClockConfig::cnfColorHum;
+		SmartClockUI::colorTemp = SmartClockConfig::cnfColorTemp;
+	}
+}
+
 void SmartClockUI::refreshScreen() {
 	bool h12;
 	bool PM;
-	uint8_t hh, mm, ss;
+	uint8_t hh, mm, ss, day, month, year;
 	float hum;  //Stores humidity value
 	float temp; //Stores temperature value
 
@@ -224,48 +254,67 @@ void SmartClockUI::refreshScreen() {
 	ss = SmartClockSensors::clock.getSecond();
 	hum = 0;
 	temp = 0;
+	day=0;
+	month=0;
+	year=0;
+
+	if(forceRefresh) {
+		tft.fillScreen(BG_COLOR);
+	}
+
 	if (!(ss % 10) || forceRefresh) {
 		//Read the humidity and temperature values
 		hum = SmartClockSensors::dht.readHumidity();
 		temp = SmartClockSensors::dht.readTemperature();
 	}
 
+	// check the date
+	if(SmartClockConfig::cnfShowDate) {
+		day = SmartClockSensors::clock.getDate();
+		if((oday!= day) || forceRefresh) {
+			bool Century = false;
+			month = SmartClockSensors::clock.getMonth(Century);
+			year = SmartClockSensors::clock.getYear();
+		}
+	}
+
 
 	uint16_t xpos = HOURS_LEFT;
-	uint16_t ypos = HOURS_TOP;
+	uint16_t ypos = SmartClockConfig::cnfShowDate?HOURS_WITH_DATE_TOP:HOURS_TOP;
 	int ysecs = ypos + SECONDS_TOP_SHIFT;
 
-	tft.setTextColor(SmartClockConfig::cnfColorTime, BG_COLOR);
+	tft.setTextColor(colorTime, BG_COLOR);
+	//	tft.setTextSize(1);
 	if ((omm != mm) || forceRefresh) { // Redraw hours and minutes time every minute
 		omm = mm;
 		// Draw hours and minutes
 		if (hh < 10)
-			xpos += tft.drawChar('0', xpos, ypos, 8); // Add hours leading zero for 24 hr clock
-		xpos += tft.drawNumber(hh, xpos, ypos, 8);    // Draw hours
+			xpos += tft.drawChar('0', xpos, ypos, FONT_L1); // Add hours leading zero for 24 hr clock
+		xpos += tft.drawNumber(hh, xpos, ypos, FONT_L1);    // Draw hours
 		xcolon = xpos; // Save colon coord for later to flash on/off later
-		xpos += tft.drawChar(':', xpos, ypos - 8, 8);
+		xpos += tft.drawChar(':', xpos, ypos - 8, FONT_L1);
 		if (mm < 10)
-			xpos += tft.drawChar('0', xpos, ypos, 8); // Add minutes leading zero
-		xpos += tft.drawNumber(mm, xpos, ypos, 8);    // Draw minutes
+			xpos += tft.drawChar('0', xpos, ypos, FONT_L1); // Add minutes leading zero
+		xpos += tft.drawNumber(mm, xpos, ypos, FONT_L1);    // Draw minutes
 		xsecs = xpos; // Save seconds 'x' position for later display updates
 	}
 	xpos = xsecs;
 
 	if (ss % 2) { // Flash the colons on/off
 		tft.setTextColor(TIME_DIMMED_COLOR, BG_COLOR);  // Set colour to grey to dim colon
-		tft.drawChar(':', xcolon, ypos - 8, 8);     // Hour:minute colon
-		xpos += tft.drawChar(':', xsecs, ysecs, 6); // Seconds colon
-		tft.setTextColor(SmartClockConfig::cnfColorTime, BG_COLOR);    // Set colour back to yellow
+		tft.drawChar(':', xcolon, ypos - 8, FONT_L1);     // Hour:minute colon
+		xpos += tft.drawChar(':', xsecs, ysecs, FONT_SECONDS); // Seconds colon
+		tft.setTextColor(colorTime, BG_COLOR);    // Set colour back to yellow
 	} else {
-		tft.drawChar(':', xcolon, ypos - 8, 8);     // Hour:minute colon
-		xpos += tft.drawChar(':', xsecs, ysecs, 6); // Seconds colon
+		tft.drawChar(':', xcolon, ypos - 8, FONT_L1);     // Hour:minute colon
+		xpos += tft.drawChar(':', xsecs, ysecs, FONT_SECONDS); // Seconds colon
 	}
 
 	//Draw seconds
 	if (ss < 10)
-		xpos += tft.drawChar('0', xpos, ysecs, 6); // Add leading zero
+		xpos += tft.drawChar('0', xpos, ysecs, FONT_SECONDS); // Add leading zero
 
-	tft.drawNumber(ss, xpos, ysecs, 6);            // Draw seconds
+	tft.drawNumber(ss, xpos, ysecs, FONT_SECONDS);            // Draw seconds
 
 	// this block is going to be executed every tenth second or when forced
 	if (!(ss % 10) || forceRefresh) {
@@ -273,31 +322,42 @@ void SmartClockUI::refreshScreen() {
 		int xpos_t = TEMP_LEFT;
 		int ypos_t = HUM_TEMP_TOP;
 		int xpos_h = HUM_LEFT;
-		forceRefresh = false;
 
 		tft.fillRect(xpos_t, ypos_t, TEMP_RIGHT, tft.height() - ypos_t, BG_COLOR);
 
-		tft.setTextColor(SmartClockConfig::cnfColorTemp, BG_COLOR);
-		xpos_t += tft.drawFloat(temp, 1, xpos_t, ypos_t, 7);
-		xpos_t += tft.drawChar('O', xpos_t, ypos_t, 4);
-		tft.drawString(TEMP_UOM_LABEL, xpos_t, ypos_t, 1);
+		tft.setTextColor(colorTemp, BG_COLOR);
+		xpos_t += tft.drawFloat(temp, 1, xpos_t, ypos_t, FONT_L3);
+		xpos_t += tft.drawChar('O', xpos_t, ypos_t, FONT_DEGREE);
+		tft.drawString(TEMP_UOM_LABEL, xpos_t, ypos_t, FONT_L2);
 
 		tft.fillRect(xpos_h, ypos_t, tft.width() - xpos_t, tft.height() - ypos_t, BG_COLOR);
 
-		tft.setTextColor(SmartClockConfig::cnfColorHum, BG_COLOR);
-		xpos_h += tft.drawNumber(hum, xpos_h, ypos_t, 7);
-		tft.drawString(HUM_UOM_LABEL, xpos_h, ypos_t, 1);
+		tft.setTextColor(colorHum, BG_COLOR);
+		xpos_h += tft.drawNumber(hum, xpos_h, ypos_t, FONT_L3);
+		tft.drawString(HUM_UOM_LABEL, xpos_h, ypos_t, FONT_L2);
 
 		if ((hh>=ICON_DAY_START) && (hh<ICON_NIGHT_START)) {
-			if(partOfDay != 1) {
+			if((partOfDay != 1) || forceRefresh) {
 				drawBMP(DAY_ICON_FILE, ICON_LEFT, ICON_TOP, 1);
 				partOfDay = 1;
 			}
 		} else {
-			if(partOfDay != 2) {
+			if((partOfDay != 2) || forceRefresh) {
 				drawBMP(NIGHT_ICON_FILE, ICON_LEFT,ICON_TOP, 1);
 				partOfDay = 2;
 			}
 		}
 	}
+
+	// draw date if needed
+	if(SmartClockConfig::cnfShowDate) {
+		if((oday!= day) || forceRefresh) {
+			char dateString[11];
+			sprintf(dateString, "%02d/%02d/20%02d", day, month, year);
+			tft.setTextColor(colorDate, BG_COLOR);
+			tft.drawString(dateString, DATE_LEFT, DATE_TOP, FONT_L2);
+			oday = day;
+		}
+	}
+	forceRefresh = false;
 }
