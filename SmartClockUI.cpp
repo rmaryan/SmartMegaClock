@@ -352,7 +352,7 @@ void SmartClockUI::refreshScreen() {
 	// draw date if needed
 	if(SmartClockConfig::cnfShowDate) {
 		if((oday!= day) || forceRefresh) {
-			tft.fillRect(DATE_LEFT, DATE_TOP, tft.width() - DATE_LEFT, tft.height() - DATE_TOP, BG_COLOR);
+			tft.fillRect(DATE_LEFT, DATE_TOP, tft.width() - DATE_LEFT, HUM_TEMP_TOP - DATE_TOP - 1, BG_COLOR);
 			char dateString[11];
 			sprintf(dateString, "%02d/%02d/20%02d", day, month, year);
 			tft.setTextColor(colorDate, BG_COLOR);
