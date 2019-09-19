@@ -7,7 +7,8 @@
  * - Temperature sensor DHT22
  * - Wifi module ESP-M2 DT-06 connected to Serial1
  * - RTC module DS3231
- * - Simple toggle switch - connected to pin #7
+ * - 150-300 kOhm photoresistor (connected to A0)
+ * - 4-axis joystick connected to pins 10, 11, 12, 13
  *
  *  Copyright (c) 2019 Maryan Rachynskyy
  *  This program is free software: you can redistribute it and/or modify
@@ -35,10 +36,18 @@
 #include "log.h"
 
 #define TIMER_REFRESH_CYCLE 1000
-#define SWITCH_PIN 7
+#define PHOTO_PIN A0
+// we specify two thresholds for dimming to debounce the photoresistor measures at the edge of dimming
+#define PHOTO_DIM_LEVEL 850
+#define PHOTO_UNDIM_LEVEL 800
+// Joystik pins - potentially we can use Pin Change Interrupts on these pins on MEGA board
+#define HOUR_P_PIN 10
+#define MIN_P_PIN 11
+#define MIN_M_PIN 12
+#define HOUR_M_PIN 13
 
 unsigned long timeForRefresh = 0; // the counter to detect when it is time to refresh the screen
-int lastDimSwitchState = -1;
+int lastDimState = -1;
 
 void setup() {
 	Serial.begin(57600);
@@ -64,7 +73,11 @@ void setup() {
 	LOGGER_PRINTLN("Initializing commander...");
 	SmartClockCommander::init(&Serial, &Serial1);
 
-	pinMode(SWITCH_PIN, INPUT);
+	pinMode(PHOTO_PIN, INPUT);
+	pinMode(HOUR_P_PIN, INPUT_PULLUP);
+	pinMode(MIN_P_PIN, INPUT_PULLUP);
+	pinMode(MIN_M_PIN, INPUT_PULLUP);
+	pinMode(HOUR_M_PIN, INPUT_PULLUP);
 }
 
 /*
@@ -87,12 +100,37 @@ void serialEvent1() {
 
 void loop() {
 	if(millis() > timeForRefresh) {
-		int dimState = digitalRead(SWITCH_PIN);
-		if(dimState!=lastDimSwitchState) {
+		// Read the light sensor and choose the day or dimmed skin
+		// Start with the bright state if possible
+		int dimState = 0;
+		if(lastDimState == HIGH) {
+			dimState = (analogRead(PHOTO_PIN) > PHOTO_UNDIM_LEVEL);
+		} else {
+			dimState = (analogRead(PHOTO_PIN) > PHOTO_DIM_LEVEL);
+		}
+		if(dimState!=lastDimState) {
 			SmartClockUI::setForceRefresh();
 			SmartClockUI::switchDimmed(dimState);
-			lastDimSwitchState = dimState;
+			lastDimState = dimState;
 		}
+
+		// check if the joystick buttons were pressed
+		// if so - adjust current time/date
+		if(!digitalRead(HOUR_P_PIN)) {
+			SmartClockUI::setForceRefresh();
+			SmartClockSensors::adjustHour(1);
+		}
+		if(!digitalRead(MIN_P_PIN)) {
+			SmartClockSensors::adjustMinutes(1);
+		}
+		if(!digitalRead(MIN_M_PIN)) {
+			SmartClockSensors::adjustMinutes(-1);
+		}
+		if(!digitalRead(HOUR_M_PIN)) {
+			SmartClockUI::setForceRefresh();
+			SmartClockSensors::adjustHour(-1);
+		}
+
 		timeForRefresh = millis()+TIMER_REFRESH_CYCLE;
 		SmartClockUI::refreshScreen();
 	}

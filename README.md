@@ -5,12 +5,14 @@
 The firmware for the smart clock.
 
 Components:
- * Ardiono MEGA 2560
+ * Arduino MEGA 2560
  * LCD screen 320x480 HX8357B
  * Temperature sensor DHT22
  * Wifi module ES-01
  * RTC module DS3231
  * Steel Case from the old car inverter
+ * 150-300 kOhm photoresistor
+ * 4-axis joystick to adjust hours and minutes
 
 ## Functions
 
@@ -20,7 +22,9 @@ The clock accepts telnet connections and can be managed using simple command lin
 
 All clock settings are stored on the SD card and are preserved if the clock was turned off.
 
-The clock screen can be dimmed using a manual switch. 
+The clock screen dims when the ambient light goes below some level.
+
+Hours and minutes can be adjusted by the mechanical 4-axis joystick.  
 
 The clock can be powered by any USB power source.
 
@@ -64,9 +68,9 @@ Example" `color date 0xFF5a20`
 
 ## Possible Future Features
 
-1. Add light sensor and dim the screen automatically when it gets dark.
-2. Add buzzer and implement wake up alarm.
-3. Connect clock to some IoT platform and feed the temperature and humidity data to some dashboard.
+1. Add buzzer and implement wake up alarm.
+2. Connect clock to some IoT platform and feed the temperature and humidity data to some dashboard.
+3. Receive precise time from some NTP server (replacement of the used WiFi module might be required).
 
 ## Used Libraries
 

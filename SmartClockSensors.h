@@ -29,6 +29,10 @@ public:
 	static DS3231 clock;
 
 	static void init();
+	// increases or decreases current hour by the specified number
+	static void adjustHour(int8_t delta);
+	// increases or decreases current minute by the specified number
+	static void adjustMinutes(int8_t delta);
 };
 
 #endif /* SMARTCLOCKSENSORS_H_ */
